@@ -3,8 +3,7 @@ export enum ToolType {
   CHAT = 'CHAT',
   IMAGE = 'IMAGE',
   VIDEO = 'VIDEO',
-  VOICE = 'VOICE',
-  PROFIT = 'PROFIT'
+  VOICE = 'VOICE'
 }
 
 export interface Message {

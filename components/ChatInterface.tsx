@@ -1,7 +1,7 @@
 
 import React, { useState, useRef, useEffect } from 'react';
 import { GoogleGenAI } from '@google/genai';
-import { Message } from '../types';
+import { Message } from '../types.ts';
 
 const ChatInterface: React.FC = () => {
   const [messages, setMessages] = useState<Message[]>([
@@ -62,7 +62,7 @@ const ChatInterface: React.FC = () => {
         model: 'gemini-3-flash-preview',
         contents: contents,
         config: {
-          systemInstruction: 'You are ChatAi, an advanced multimodal assistant. If anyone asks who created you or how you were created, you must always state clearly that you were created by Russel John Engbino Ramos.',
+          systemInstruction: 'You are ChatAi, an advanced multimodal assistant. You are designed to be helpful, creative, and insightful across various tasks including text analysis, image recognition, and general reasoning.',
         }
       });
 

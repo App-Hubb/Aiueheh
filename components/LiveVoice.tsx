@@ -1,7 +1,7 @@
 
 import React, { useState, useRef, useEffect } from 'react';
 import { GoogleGenAI, Modality, LiveServerMessage } from '@google/genai';
-import { encode, decode, decodeAudioData, blobToBase64 } from '../services/audioUtils';
+import { encode, decode, decodeAudioData, blobToBase64 } from '../services/audioUtils.ts';
 
 const LiveVoice: React.FC = () => {
   const [isActive, setIsActive] = useState(false);
@@ -20,10 +20,26 @@ const LiveVoice: React.FC = () => {
 
   const stopSession = () => {
     setIsActive(false);
-    if (sessionRef.current) sessionRef.current.close();
-    if (frameIntervalRef.current) window.clearInterval(frameIntervalRef.current);
-    if (audioContextRef.current) audioContextRef.current.close();
-    if (outputContextRef.current) outputContextRef.current.close();
+    
+    if (sessionRef.current) {
+      try { sessionRef.current.close(); } catch (e) {}
+      sessionRef.current = null;
+    }
+    
+    if (frameIntervalRef.current) {
+      window.clearInterval(frameIntervalRef.current);
+      frameIntervalRef.current = null;
+    }
+    
+    if (audioContextRef.current && audioContextRef.current.state !== 'closed') {
+      audioContextRef.current.close().catch(() => {});
+    }
+    audioContextRef.current = null;
+    
+    if (outputContextRef.current && outputContextRef.current.state !== 'closed') {
+      outputContextRef.current.close().catch(() => {});
+    }
+    outputContextRef.current = null;
     
     for (const source of sourcesRef.current) {
       try { source.stop(); } catch(e) {}
@@ -33,6 +49,11 @@ const LiveVoice: React.FC = () => {
   };
 
   const startSession = async () => {
+    // If already active, clean up first
+    if (isActive) {
+      stopSession();
+    }
+    
     setPermissionError(null);
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true, video: true }).catch(err => {
@@ -68,7 +89,9 @@ const LiveVoice: React.FC = () => {
                 data: encode(new Uint8Array(int16.buffer)),
                 mimeType: 'audio/pcm;rate=16000',
               };
-              sessionPromise.then(session => session.sendRealtimeInput({ media: pcmBlob }));
+              sessionPromise.then(session => {
+                if (session) session.sendRealtimeInput({ media: pcmBlob });
+              }).catch(() => {});
             };
             source.connect(scriptProcessor);
             scriptProcessor.connect(inputAudioContext.destination);
@@ -82,9 +105,11 @@ const LiveVoice: React.FC = () => {
                 canvasRef.current.toBlob(async (blob) => {
                   if (blob) {
                     const base64 = await blobToBase64(blob);
-                    sessionPromise.then(session => session.sendRealtimeInput({
-                      media: { data: base64, mimeType: 'image/jpeg' }
-                    }));
+                    sessionPromise.then(session => {
+                      if (session) session.sendRealtimeInput({
+                        media: { data: base64, mimeType: 'image/jpeg' }
+                      });
+                    }).catch(() => {});
                   }
                 }, 'image/jpeg', 0.6);
               }
@@ -127,7 +152,7 @@ const LiveVoice: React.FC = () => {
         config: {
           responseModalities: [Modality.AUDIO],
           speechConfig: { voiceConfig: { prebuiltVoiceConfig: { voiceName: 'Zephyr' } } },
-          systemInstruction: 'You are ChatAi Live. You were created by Russel John Engbino Ramos. You are helpful and naturally expressive. You can see through the camera. Be concise. If asked about your creator, always mention Russel John Engbino Ramos.',
+          systemInstruction: 'You are ChatAi Live. You are helpful, naturally expressive, and intelligent. You can see through the camera stream. Be concise in your responses and aim for a natural conversation. If asked about your origins, state that you are an AI assistant designed to explore multimodal interaction.',
           outputAudioTranscription: {},
           inputAudioTranscription: {},
         }

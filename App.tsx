@@ -1,12 +1,11 @@
 
 import React, { useState, useEffect } from 'react';
-import Sidebar from './components/Sidebar';
-import ChatInterface from './components/ChatInterface';
-import ImageGenerator from './components/ImageGenerator';
-import VideoGenerator from './components/VideoGenerator';
-import LiveVoice from './components/LiveVoice';
-import ProfitHub from './components/ProfitHub';
-import { ToolType } from './types';
+import Sidebar from './components/Sidebar.tsx';
+import ChatInterface from './components/ChatInterface.tsx';
+import ImageGenerator from './components/ImageGenerator.tsx';
+import VideoGenerator from './components/VideoGenerator.tsx';
+import LiveVoice from './components/LiveVoice.tsx';
+import { ToolType } from './types.ts';
 
 const App: React.FC = () => {
   const [activeTool, setActiveTool] = useState<ToolType>(ToolType.CHAT);
@@ -18,30 +17,40 @@ const App: React.FC = () => {
     return saved ? JSON.parse(saved) : null;
   });
   const [imageCount, setImageCount] = useState(() => parseInt(localStorage.getItem('imageCount') || '0'));
-  
-  // Set initial balance to 134.00 if not already set
-  const [balance, setBalance] = useState(() => {
-    const saved = localStorage.getItem('balance');
-    return saved ? parseFloat(saved) : 134.00;
-  });
 
   useEffect(() => {
     localStorage.setItem('isLoggedIn', isLoggedIn.toString());
-    if (userProfile) localStorage.setItem('userProfile', JSON.stringify(userProfile));
+    if (userProfile) {
+      localStorage.setItem('userProfile', JSON.stringify(userProfile));
+    } else {
+      localStorage.removeItem('userProfile');
+    }
   }, [isLoggedIn, userProfile]);
 
   useEffect(() => {
     localStorage.setItem('imageCount', imageCount.toString());
   }, [imageCount]);
 
-  useEffect(() => {
-    localStorage.setItem('balance', balance.toFixed(2));
-  }, [balance]);
+  const handleLogout = () => {
+    setIsLoggedIn(false);
+    setUserProfile(null);
+    localStorage.removeItem('isLoggedIn');
+    localStorage.removeItem('userProfile');
+  };
 
   const handleLogin = () => {
-    // The code is now fixed to 134 as requested
     const simulatedCode = "134";
     
+    // Generate random user data for the session
+    const firstNames = ["Nova", "Luna", "Astra", "Zephyr", "Kael", "Mira", "Orion", "Lyra"];
+    const lastNames = ["Pulse", "Stellar", "Void", "Cloud", "Shadow", "Light", "Echo", "Drift"];
+    const randomFirst = firstNames[Math.floor(Math.random() * firstNames.length)];
+    const randomLast = lastNames[Math.floor(Math.random() * lastNames.length)];
+    const randomName = `${randomFirst} ${randomLast}`;
+    const randomEmail = `${randomFirst.toLowerCase()}.${randomLast.toLowerCase()}@gmail.com`;
+    const initials = `${randomFirst[0]}${randomLast[0]}`;
+    const avatar = `https://i.pravatar.cc/150?u=${randomEmail}`;
+
     const win = window.open('about:blank', 'Sign up - ChatAi', 'width=500,height=800');
     if (win) {
       win.document.write(`
@@ -153,6 +162,7 @@ const App: React.FC = () => {
 
           <script>
             const CORRECT_CODE = "${simulatedCode}";
+            const PROFILE_DATA = ${JSON.stringify({ name: randomName, email: randomEmail, initials, avatar })};
             
             function sendCode() {
               document.getElementById('loading-overlay').style.display = 'flex';
@@ -178,7 +188,7 @@ const App: React.FC = () => {
               if (enteredCode === CORRECT_CODE) {
                 document.getElementById('loading-overlay').style.display = 'flex';
                 setTimeout(() => {
-                   window.opener.postMessage('auth_success', '*');
+                   window.opener.postMessage({ type: 'auth_success', profile: PROFILE_DATA }, '*');
                    window.close();
                 }, 1000);
               } else {
@@ -197,13 +207,9 @@ const App: React.FC = () => {
     }
 
     const handleAuthMessage = (event: MessageEvent) => {
-      if (event.data === 'auth_success') {
+      if (event.data?.type === 'auth_success') {
         setIsLoggedIn(true);
-        setUserProfile({
-          name: "Russel John",
-          email: "ramos.russel@gmail.com",
-          initials: "RR"
-        });
+        setUserProfile(event.data.profile);
         window.removeEventListener('message', handleAuthMessage);
       }
     };
@@ -216,7 +222,6 @@ const App: React.FC = () => {
       case ToolType.IMAGE: return <ImageGenerator imageCount={imageCount} setImageCount={setImageCount} isLoggedIn={isLoggedIn} onLogin={handleLogin} />;
       case ToolType.VIDEO: return <VideoGenerator />;
       case ToolType.VOICE: return <LiveVoice />;
-      case ToolType.PROFIT: return <ProfitHub balance={balance} setBalance={setBalance} isLoggedIn={isLoggedIn} onLogin={handleLogin} userProfile={userProfile} />;
       default: return <ChatInterface />;
     }
   };
@@ -225,8 +230,8 @@ const App: React.FC = () => {
     <div className="flex h-screen w-full bg-slate-950 text-slate-200 overflow-hidden">
       <Sidebar 
         activeTool={activeTool} setActiveTool={setActiveTool} 
-        isLoggedIn={isLoggedIn} balance={balance} 
-        onLogin={handleLogin} userProfile={userProfile}
+        isLoggedIn={isLoggedIn} 
+        onLogin={handleLogin} onLogout={handleLogout} userProfile={userProfile}
       />
       <main className="flex-1 relative">
         <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] bg-blue-600/5 rounded-full blur-[120px] pointer-events-none" />
