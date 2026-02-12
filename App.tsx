@@ -10,32 +10,62 @@ import { ToolType } from './types.ts';
 const App: React.FC = () => {
   const [activeTool, setActiveTool] = useState<ToolType>(ToolType.CHAT);
   
-  // Persistent Global State
-  const [isLoggedIn, setIsLoggedIn] = useState(() => localStorage.getItem('isLoggedIn') === 'true');
-  const [userProfile, setUserProfile] = useState(() => {
-    const saved = localStorage.getItem('userProfile');
-    return saved ? JSON.parse(saved) : null;
+  // Persistent Global State with safety checks
+  const [isLoggedIn, setIsLoggedIn] = useState(() => {
+    try {
+      return localStorage.getItem('isLoggedIn') === 'true';
+    } catch (e) {
+      return false;
+    }
   });
-  const [imageCount, setImageCount] = useState(() => parseInt(localStorage.getItem('imageCount') || '0'));
+
+  const [userProfile, setUserProfile] = useState(() => {
+    try {
+      const saved = localStorage.getItem('userProfile');
+      if (!saved || saved === 'undefined' || saved === 'null') return null;
+      return JSON.parse(saved);
+    } catch (e) {
+      console.warn("Failed to parse userProfile from localStorage", e);
+      return null;
+    }
+  });
+
+  const [imageCount, setImageCount] = useState(() => {
+    try {
+      return parseInt(localStorage.getItem('imageCount') || '0', 10);
+    } catch (e) {
+      return 0;
+    }
+  });
 
   useEffect(() => {
-    localStorage.setItem('isLoggedIn', isLoggedIn.toString());
-    if (userProfile) {
-      localStorage.setItem('userProfile', JSON.stringify(userProfile));
-    } else {
-      localStorage.removeItem('userProfile');
+    try {
+      localStorage.setItem('isLoggedIn', isLoggedIn.toString());
+      if (userProfile) {
+        localStorage.setItem('userProfile', JSON.stringify(userProfile));
+      } else {
+        localStorage.removeItem('userProfile');
+      }
+    } catch (e) {
+      console.warn("Failed to save to localStorage", e);
     }
   }, [isLoggedIn, userProfile]);
 
   useEffect(() => {
-    localStorage.setItem('imageCount', imageCount.toString());
+    try {
+      localStorage.setItem('imageCount', imageCount.toString());
+    } catch (e) {
+      console.warn("Failed to save imageCount", e);
+    }
   }, [imageCount]);
 
   const handleLogout = () => {
     setIsLoggedIn(false);
     setUserProfile(null);
-    localStorage.removeItem('isLoggedIn');
-    localStorage.removeItem('userProfile');
+    try {
+      localStorage.removeItem('isLoggedIn');
+      localStorage.removeItem('userProfile');
+    } catch (e) {}
   };
 
   const handleLogin = () => {
